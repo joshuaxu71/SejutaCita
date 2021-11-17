@@ -10,7 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
-var Db *mongo.Client
+var Db *mongo.Database
 
 func InitDb() {
 	var clientOptions *options.ClientOptions
@@ -34,14 +34,14 @@ func InitDb() {
 		log.Fatal(err)
 	}
 
-	Db = client
+	Db = client.Database(os.Getenv("db_name"))
 }
 
-func GetDb() *mongo.Client {
-	err := Db.Ping(context.Background(), readpref.Primary())
+func GetDb() (*mongo.Database, error) {
+	err := Db.Client().Ping(context.Background(), readpref.Primary())
 	if err != nil {
-		log.Fatal("Couldn't connect to the database", err)
+		return nil, err
 	}
 
-	return Db
+	return Db, nil
 }
