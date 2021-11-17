@@ -3,6 +3,8 @@ package models
 import (
 	"SejutaCita/common"
 	"context"
+	"encoding/json"
+	"io"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -10,17 +12,19 @@ import (
 )
 
 type User struct {
-	Id         primitive.ObjectID `bson:"_id"`
-	CreatedAt  time.Time          `bson:"created_at"`
-	UpdatedAt  time.Time          `bson:"updated_at"`
-	DeletedAt  *time.Time         `bson:"deleted_at"`
-	Role       UserRole           `bson:"role"`
-	FirstName  string             `bson:"first_name"`
-	MiddleName *string            `bson:"middle_name"`
-	LastName   *string            `bson:"last_name"`
-	Username   string             `bson:"username"`
-	Password   string             `bson:"password"`
+	Id         primitive.ObjectID `bson:"_id"         json:"id"`
+	CreatedAt  time.Time          `bson:"created_at"  json:"created_at"`
+	UpdatedAt  time.Time          `bson:"updated_at"  json:"updated_at"`
+	DeletedAt  *time.Time         `bson:"deleted_at"  json:"deleted_at"`
+	Role       UserRole           `bson:"role"        json:"role"`
+	FirstName  string             `bson:"first_name"  json:"first_name"`
+	MiddleName *string            `bson:"middle_name" json:"middle_name"`
+	LastName   *string            `bson:"last_name"   json:"last_name"`
+	Username   string             `bson:"username"    json:"username"`
+	Password   string             `bson:"password"    json:"password"`
 }
+
+type Users []*User
 
 type UserRole string
 
@@ -46,7 +50,17 @@ type UserFilter struct {
 	Sort *UserSort
 }
 
-func GetUserById(ctx *context.Context, id string) (*User, error) {
+func (user *User) FromJSON(r io.Reader) error {
+	e := json.NewDecoder(r)
+	return e.Decode(user)
+}
+
+func (users *Users) ToJSON(w io.Writer) error {
+	e := json.NewEncoder(w)
+	return e.Encode(users)
+}
+
+func GetUserById(ctx *context.Context, id string) (*Users, error) {
 	db, err := common.GetDb()
 	if err != nil {
 		return nil, err
@@ -59,17 +73,18 @@ func GetUserById(ctx *context.Context, id string) (*User, error) {
 		return nil, err
 	}
 
-	return &user, nil
+	users := append(Users{}, &user)
+	return &users, nil
 }
 
-func GetUsers(ctx *context.Context, filter *UserFilter) ([]*User, error) {
+func GetUsers(ctx *context.Context, filter *UserFilter) (Users, error) {
 	db, err := common.GetDb()
 	if err != nil {
 		return nil, err
 	}
 
 	pipeline := []bson.M{}
-	users := []*User{}
+	users := Users{}
 
 	if filter != nil {
 		if filter.Role != nil {
