@@ -15,7 +15,7 @@ func GetUserById(rw http.ResponseWriter, r *http.Request) {
 
 	users, err := models.GetUserById(&ctx, mux.Vars(r)["id"])
 	if err != nil {
-		http.Error(rw, "User with specified ID not found", http.StatusNotFound)
+		http.Error(rw, err.Error(), http.StatusNotFound)
 	}
 
 	err = users.ToJSON(rw)
@@ -27,7 +27,41 @@ func GetUserById(rw http.ResponseWriter, r *http.Request) {
 func GetUsers(rw http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	users, err := models.GetUsers(&ctx, nil)
+	filter := models.UserFilter{}
+	if _, ok := mux.Vars(r)["role"]; ok {
+		if mux.Vars(r)["role"] == "Admin" {
+			admin := models.Admin
+			filter.Role = &admin
+		} else {
+			general := models.General
+			filter.Role = &general
+		}
+	}
+	if _, ok := mux.Vars(r)["sort"]; ok {
+		if mux.Vars(r)["sort"] == "created_at.desc" {
+			filter.Sort = &models.UserSort{
+				Category: models.CreatedAt,
+				Order:    models.Desc,
+			}
+		} else if mux.Vars(r)["sort"] == "first_name.asc" {
+			filter.Sort = &models.UserSort{
+				Category: models.FirstName,
+				Order:    models.Asc,
+			}
+		} else if mux.Vars(r)["sort"] == "first_name.desc" {
+			filter.Sort = &models.UserSort{
+				Category: models.FirstName,
+				Order:    models.Desc,
+			}
+		} else {
+			filter.Sort = &models.UserSort{
+				Category: models.CreatedAt,
+				Order:    models.Asc,
+			}
+		}
+	}
+
+	users, err := models.GetUsers(&ctx, &filter)
 	if err != nil {
 		http.Error(rw, "Unable to retrieve data", http.StatusInternalServerError)
 	}
@@ -73,7 +107,7 @@ func DeleteUser(rw http.ResponseWriter, r *http.Request) {
 
 	result, err := models.DeleteUser(&ctx, mux.Vars(r)["id"])
 	if err != nil {
-		http.Error(rw, "User with specified ID not found", http.StatusNotFound)
+		http.Error(rw, err.Error(), http.StatusNotFound)
 	}
 
 	rw.Write([]byte(strconv.FormatBool(result)))

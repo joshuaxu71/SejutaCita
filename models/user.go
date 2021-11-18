@@ -13,6 +13,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type User struct {
@@ -115,6 +116,13 @@ func (users *Users) ToJSON(w io.Writer) error {
 }
 
 func GetUserById(ctx *context.Context, id string) (*Users, error) {
+	context := *ctx
+	if context.Value("user_role") != "Admin" {
+		if context.Value("user_id") != id {
+			return nil, errors.New("Not enough privilege")
+		}
+	}
+
 	db, err := common.GetDb()
 	if err != nil {
 		return nil, err
@@ -148,6 +156,8 @@ func GetUserByUsername(ctx *context.Context, username string) (*User, error) {
 }
 
 func GetUsers(ctx *context.Context, filter *UserFilter) (Users, error) {
+	context := *ctx
+
 	db, err := common.GetDb()
 	if err != nil {
 		return nil, err
@@ -165,7 +175,7 @@ func GetUsers(ctx *context.Context, filter *UserFilter) (Users, error) {
 		}
 	}
 
-	cur, err := db.Collection("users").Aggregate(*ctx, pipeline)
+	cur, err := db.Collection("users").Aggregate(*ctx, pipeline, options.Aggregate().SetCollation(&options.Collation{Locale: "en"}))
 	if err != nil {
 		return nil, err
 	}
@@ -175,6 +185,9 @@ func GetUsers(ctx *context.Context, filter *UserFilter) (Users, error) {
 		err := cur.Decode(&user)
 		if err != nil {
 			return nil, err
+		}
+		if user.Id.Hex() != context.Value("user_id") {
+			continue
 		}
 		users = append(users, &user)
 	}
