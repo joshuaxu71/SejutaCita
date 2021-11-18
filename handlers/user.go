@@ -56,7 +56,7 @@ func (u *Users) CreateUser(rw http.ResponseWriter, r *http.Request) {
 	user := r.Context().Value(KeyUser{}).(models.User)
 	id, err := models.CreateUser(&ctx, user)
 	if err != nil {
-		http.Error(rw, "Unable to create user", http.StatusInternalServerError)
+		http.Error(rw, fmt.Sprintf("Unable to create user: %s", err), http.StatusInternalServerError)
 	}
 
 	rw.Write([]byte(id.Hex()))
@@ -106,11 +106,22 @@ func (u Users) MiddlewareValidateProduct(next http.Handler) http.Handler {
 			return
 		}
 
-		// validate the user
-		err = user.Validate()
-		if err != nil {
-			http.Error(rw, fmt.Sprintf("Error validating user: %s", err), http.StatusBadRequest)
-			return
+		// validate the user if it's create
+		if r.Method == http.MethodPost {
+			err = user.ValidateCreate()
+			if err != nil {
+				http.Error(rw, fmt.Sprintf("Error validating user: %s", err), http.StatusBadRequest)
+				return
+			}
+		}
+
+		// validate Role field if it's update
+		if r.Method == http.MethodPut {
+			err = user.ValidateUpdate()
+			if err != nil {
+				http.Error(rw, fmt.Sprintf("Error validating user: %s", err), http.StatusBadRequest)
+				return
+			}
 		}
 
 		// add the user to the context

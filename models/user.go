@@ -4,12 +4,15 @@ import (
 	"SejutaCita/common"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/go-playground/validator"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type User struct {
@@ -17,12 +20,12 @@ type User struct {
 	CreatedAt  time.Time          `bson:"created_at"  json:"created_at"`
 	UpdatedAt  time.Time          `bson:"updated_at"  json:"updated_at"`
 	DeletedAt  *time.Time         `bson:"deleted_at"  json:"deleted_at"`
-	Role       UserRole           `bson:"role"        json:"role"         validate:"required,role"`
-	FirstName  string             `bson:"first_name"  json:"first_name"   validate:"required"`
+	Role       UserRole           `bson:"role"        json:"role"         validate:"role"`
+	FirstName  string             `bson:"first_name"  json:"first_name"   validate:"first_name"`
 	MiddleName *string            `bson:"middle_name" json:"middle_name"`
 	LastName   *string            `bson:"last_name"   json:"last_name"`
-	Username   string             `bson:"username"    json:"username"     validate:"required"`
-	Password   string             `bson:"password"    json:"password"     validate:"required"`
+	Username   string             `bson:"username"    json:"username"     validate:"username"`
+	Password   string             `bson:"password"    json:"password"     validate:"password"`
 }
 
 type Users []*User
@@ -51,15 +54,49 @@ type UserFilter struct {
 	Sort *UserSort
 }
 
-func (user *User) Validate() error {
+func (user *User) ValidateCreate() error {
 	validate := validator.New()
 	validate.RegisterValidation("role", validateRole)
+	validate.RegisterValidation("first_name", validateFirstName)
+	validate.RegisterValidation("username", validateUsername)
+	validate.RegisterValidation("password", validatePassword)
+
+	return validate.Struct(user)
+}
+
+func (user *User) ValidateUpdate() error {
+	validate := validator.New()
+	validate.RegisterValidation("role", validateRole)
+	validate.RegisterValidation("first_name", EmptyValidate)
+	validate.RegisterValidation("username", EmptyValidate)
+	validate.RegisterValidation("password", EmptyValidate)
 
 	return validate.Struct(user)
 }
 
 func validateRole(fl validator.FieldLevel) bool {
 	if fl.Field().String() == string(General) || fl.Field().String() == string(Admin) {
+		return true
+	}
+	return false
+}
+
+func validateFirstName(fl validator.FieldLevel) bool {
+	if fl.Field().String() != "" {
+		return true
+	}
+	return false
+}
+
+func validateUsername(fl validator.FieldLevel) bool {
+	if fl.Field().String() != "" {
+		return true
+	}
+	return false
+}
+
+func validatePassword(fl validator.FieldLevel) bool {
+	if fl.Field().String() != "" {
 		return true
 	}
 	return false
@@ -82,7 +119,24 @@ func GetUserById(ctx *context.Context, id string) (*Users, error) {
 	}
 
 	user := User{}
-	filter := bson.D{primitive.E{Key: "_id", Value: common.ObjectIDFromHex(id)}}
+	filter := bson.M{"_id": common.ObjectIDFromHex(id)}
+	err = db.Collection("users").FindOne(*ctx, filter).Decode(&user)
+	if err != nil {
+		return nil, err
+	}
+
+	users := append(Users{}, &user)
+	return &users, nil
+}
+
+func GetUserByUsername(ctx *context.Context, username string) (*Users, error) {
+	db, err := common.GetDb()
+	if err != nil {
+		return nil, err
+	}
+
+	user := User{}
+	filter := bson.M{"username": username}
 	err = db.Collection("users").FindOne(*ctx, filter).Decode(&user)
 	if err != nil {
 		return nil, err
@@ -134,6 +188,15 @@ func CreateUser(ctx *context.Context, user User) (primitive.ObjectID, error) {
 		return primitive.NilObjectID, err
 	}
 
+	user.Username = strings.ToLower(user.Username)
+	existingUser, err := GetUserByUsername(ctx, user.Username)
+	if err != nil && err != mongo.ErrNoDocuments {
+		return primitive.NilObjectID, err
+	}
+	if existingUser != nil {
+		return primitive.NilObjectID, errors.New("Username already exists")
+	}
+
 	now := time.Now()
 	user.Id = primitive.NewObjectID()
 	user.CreatedAt = now
@@ -158,7 +221,7 @@ func UpdateUser(ctx *context.Context, id string, user User) (bool, error) {
 		return false, err
 	}
 
-	filter := bson.D{primitive.E{Key: "_id", Value: common.ObjectIDFromHex(id)}}
+	filter := bson.M{"_id": common.ObjectIDFromHex(id)}
 	updates := bson.M{}
 	if user.Role != "" {
 		updates["role"] = user.Role
@@ -197,7 +260,7 @@ func DeleteUser(ctx *context.Context, id string) (bool, error) {
 		return false, err
 	}
 
-	filter := bson.D{primitive.E{Key: "_id", Value: common.ObjectIDFromHex(id)}}
+	filter := bson.M{"_id": common.ObjectIDFromHex(id)}
 
 	_, err = db.Collection("users").DeleteOne(*ctx, filter)
 	if err != nil {
