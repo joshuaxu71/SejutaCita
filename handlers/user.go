@@ -4,24 +4,14 @@ import (
 	"SejutaCita/models"
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/gorilla/mux"
 )
 
-type Users struct {
-	l *log.Logger
-}
-
-func NewUsers(l *log.Logger) *Users {
-	return &Users{l}
-}
-
-func (u *Users) GetUserById(rw http.ResponseWriter, r *http.Request) {
-	u.l.Println("Handle GET User", mux.Vars(r)["id"])
-	ctx := context.TODO()
+func GetUserById(rw http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 
 	users, err := models.GetUserById(&ctx, mux.Vars(r)["id"])
 	if err != nil {
@@ -34,9 +24,8 @@ func (u *Users) GetUserById(rw http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (u *Users) GetUsers(rw http.ResponseWriter, r *http.Request) {
-	u.l.Println("Handle GET Users")
-	ctx := context.TODO()
+func GetUsers(rw http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 
 	users, err := models.GetUsers(&ctx, nil)
 	if err != nil {
@@ -49,8 +38,7 @@ func (u *Users) GetUsers(rw http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (u *Users) CreateUser(rw http.ResponseWriter, r *http.Request) {
-	u.l.Println("Handle POST User")
+func CreateUser(rw http.ResponseWriter, r *http.Request) {
 	ctx := context.TODO()
 
 	user := r.Context().Value(KeyUser{}).(models.User)
@@ -62,8 +50,7 @@ func (u *Users) CreateUser(rw http.ResponseWriter, r *http.Request) {
 	rw.Write([]byte(id.Hex()))
 }
 
-func (u *Users) UpdateUser(rw http.ResponseWriter, r *http.Request) {
-	u.l.Println("Handle PUT User", mux.Vars(r)["id"])
+func UpdateUser(rw http.ResponseWriter, r *http.Request) {
 	ctx := context.TODO()
 
 	_, err := models.GetUserById(&ctx, mux.Vars(r)["id"])
@@ -81,8 +68,7 @@ func (u *Users) UpdateUser(rw http.ResponseWriter, r *http.Request) {
 	rw.Write([]byte(strconv.FormatBool(result)))
 }
 
-func (u *Users) DeleteUser(rw http.ResponseWriter, r *http.Request) {
-	u.l.Println("Handle DELETE User", mux.Vars(r)["id"])
+func DeleteUser(rw http.ResponseWriter, r *http.Request) {
 	ctx := context.TODO()
 
 	result, err := models.DeleteUser(&ctx, mux.Vars(r)["id"])
@@ -95,19 +81,18 @@ func (u *Users) DeleteUser(rw http.ResponseWriter, r *http.Request) {
 
 type KeyUser struct{}
 
-func (u Users) MiddlewareValidateProduct(next http.Handler) http.Handler {
+func MiddlewareValidateUser(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		user := models.User{}
 
 		err := user.FromJSON(r.Body)
 		if err != nil {
-			u.l.Println("[ERROR] deserializing user", err)
 			http.Error(rw, "Error reading user", http.StatusBadRequest)
 			return
 		}
 
 		// validate the user if it's create
-		if r.Method == http.MethodPost {
+		if r.Method == http.MethodPost && r.RequestURI != "/login" {
 			err = user.ValidateCreate()
 			if err != nil {
 				http.Error(rw, fmt.Sprintf("Error validating user: %s", err), http.StatusBadRequest)

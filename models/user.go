@@ -16,16 +16,18 @@ import (
 )
 
 type User struct {
-	Id         primitive.ObjectID `bson:"_id"         json:"id"`
-	CreatedAt  time.Time          `bson:"created_at"  json:"created_at"`
-	UpdatedAt  time.Time          `bson:"updated_at"  json:"updated_at"`
-	DeletedAt  *time.Time         `bson:"deleted_at"  json:"deleted_at"`
-	Role       UserRole           `bson:"role"        json:"role"         validate:"role"`
-	FirstName  string             `bson:"first_name"  json:"first_name"   validate:"first_name"`
-	MiddleName *string            `bson:"middle_name" json:"middle_name"`
-	LastName   *string            `bson:"last_name"   json:"last_name"`
-	Username   string             `bson:"username"    json:"username"     validate:"username"`
-	Password   string             `bson:"password"    json:"password"     validate:"password"`
+	Id           primitive.ObjectID `bson:"_id"           json:"id"`
+	CreatedAt    time.Time          `bson:"created_at"    json:"created_at"`
+	UpdatedAt    time.Time          `bson:"updated_at"    json:"updated_at"`
+	DeletedAt    *time.Time         `bson:"deleted_at"    json:"deleted_at"`
+	Token        *string            `bson:"token"         json:"token"`
+	RefreshToken *string            `bson:"refresh_token" json:"refresh_token"`
+	Role         UserRole           `bson:"role"          json:"role"         validate:"role"`
+	FirstName    string             `bson:"first_name"    json:"first_name"   validate:"first_name"`
+	MiddleName   *string            `bson:"middle_name"   json:"middle_name"`
+	LastName     *string            `bson:"last_name"     json:"last_name"`
+	Username     string             `bson:"username"      json:"username"     validate:"username"`
+	Password     string             `bson:"password"      json:"password"     validate:"password"`
 }
 
 type Users []*User
@@ -129,7 +131,7 @@ func GetUserById(ctx *context.Context, id string) (*Users, error) {
 	return &users, nil
 }
 
-func GetUserByUsername(ctx *context.Context, username string) (*Users, error) {
+func GetUserByUsername(ctx *context.Context, username string) (*User, error) {
 	db, err := common.GetDb()
 	if err != nil {
 		return nil, err
@@ -142,8 +144,7 @@ func GetUserByUsername(ctx *context.Context, username string) (*Users, error) {
 		return nil, err
 	}
 
-	users := append(Users{}, &user)
-	return &users, nil
+	return &user, nil
 }
 
 func GetUsers(ctx *context.Context, filter *UserFilter) (Users, error) {
@@ -201,7 +202,7 @@ func CreateUser(ctx *context.Context, user User) (primitive.ObjectID, error) {
 	user.Id = primitive.NewObjectID()
 	user.CreatedAt = now
 	user.UpdatedAt = now
-	user.Password = common.HashAndSalt(user.Password)
+	user.Password = HashAndSalt(user.Password)
 	result, err := db.Collection("users").InsertOne(*ctx, user)
 	if err != nil {
 		return primitive.NilObjectID, err
@@ -236,7 +237,7 @@ func UpdateUser(ctx *context.Context, id string, user User) (bool, error) {
 		updates["last_name"] = user.LastName
 	}
 	if user.Password != "" {
-		user.Password = common.HashAndSalt(user.Password)
+		user.Password = HashAndSalt(user.Password)
 		updates["password"] = user.Password
 	}
 	updater := bson.M{"$set": updates}
