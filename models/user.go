@@ -123,6 +123,7 @@ func CreateUser(ctx *context.Context, user User) (primitive.ObjectID, error) {
 	user.Id = primitive.NewObjectID()
 	user.CreatedAt = now
 	user.UpdatedAt = now
+	user.Password = common.HashAndSalt(user.Password)
 	result, err := db.Collection("users").InsertOne(*ctx, user)
 	if err != nil {
 		return primitive.NilObjectID, err
@@ -157,7 +158,8 @@ func UpdateUser(ctx *context.Context, id string, user User) (bool, error) {
 		updates["last_name"] = user.LastName
 	}
 	if user.Password != "" {
-		updates["role"] = user.Password
+		user.Password = common.HashAndSalt(user.Password)
+		updates["password"] = user.Password
 	}
 	updater := bson.M{"$set": updates}
 
