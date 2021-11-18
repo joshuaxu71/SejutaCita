@@ -3,6 +3,7 @@ package handlers
 import (
 	"SejutaCita/models"
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -105,7 +106,14 @@ func (u Users) MiddlewareValidateProduct(next http.Handler) http.Handler {
 			return
 		}
 
-		// add the product to the context
+		// validate the user
+		err = user.Validate()
+		if err != nil {
+			http.Error(rw, fmt.Sprintf("Error validating user: %s", err), http.StatusBadRequest)
+			return
+		}
+
+		// add the user to the context
 		ctx := context.WithValue(r.Context(), KeyUser{}, user)
 		r = r.WithContext(ctx)
 

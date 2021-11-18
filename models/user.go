@@ -7,6 +7,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/go-playground/validator"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -16,12 +17,12 @@ type User struct {
 	CreatedAt  time.Time          `bson:"created_at"  json:"created_at"`
 	UpdatedAt  time.Time          `bson:"updated_at"  json:"updated_at"`
 	DeletedAt  *time.Time         `bson:"deleted_at"  json:"deleted_at"`
-	Role       UserRole           `bson:"role"        json:"role"`
-	FirstName  string             `bson:"first_name"  json:"first_name"`
+	Role       UserRole           `bson:"role"        json:"role"         validate:"required,role"`
+	FirstName  string             `bson:"first_name"  json:"first_name"   validate:"required"`
 	MiddleName *string            `bson:"middle_name" json:"middle_name"`
 	LastName   *string            `bson:"last_name"   json:"last_name"`
-	Username   string             `bson:"username"    json:"username"`
-	Password   string             `bson:"password"    json:"password"`
+	Username   string             `bson:"username"    json:"username"     validate:"required"`
+	Password   string             `bson:"password"    json:"password"     validate:"required"`
 }
 
 type Users []*User
@@ -48,6 +49,20 @@ type UserSort struct {
 type UserFilter struct {
 	Role *UserRole
 	Sort *UserSort
+}
+
+func (user *User) Validate() error {
+	validate := validator.New()
+	validate.RegisterValidation("role", validateRole)
+
+	return validate.Struct(user)
+}
+
+func validateRole(fl validator.FieldLevel) bool {
+	if fl.Field().String() == string(General) || fl.Field().String() == string(Admin) {
+		return true
+	}
+	return false
 }
 
 func (user *User) FromJSON(r io.Reader) error {
