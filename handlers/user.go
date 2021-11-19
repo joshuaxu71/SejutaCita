@@ -249,10 +249,8 @@ func (h *UserHandler) MiddlewareValidateUser(next http.Handler) http.Handler {
 			err = user.ValidateCreate()
 			if err != nil {
 				rw.WriteHeader(http.StatusBadRequest)
-				models.GenericError{Message: err.Error()}.ToJSON(rw)
+				models.GenericError{Message: fmt.Sprintf("Error validating user: %s", err)}.ToJSON(rw)
 				return
-				// http.Error(rw, fmt.Sprintf("Error validating user: %s", err), http.StatusBadRequest)
-				// return
 			}
 		}
 
@@ -261,10 +259,8 @@ func (h *UserHandler) MiddlewareValidateUser(next http.Handler) http.Handler {
 			err = user.ValidateUpdate()
 			if err != nil {
 				rw.WriteHeader(http.StatusBadRequest)
-				models.GenericError{Message: err.Error()}.ToJSON(rw)
+				models.GenericError{Message: fmt.Sprintf("Error validating user: %s", err)}.ToJSON(rw)
 				return
-				// http.Error(rw, fmt.Sprintf("Error validating user: %s", err), http.StatusBadRequest)
-				// return
 			}
 		}
 

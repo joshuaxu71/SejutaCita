@@ -134,6 +134,16 @@ definitions:
     - password
     type: object
     x-go-package: SejutaCita/models
+  UserToken:
+    properties:
+      refresh_token:
+        type: string
+        x-go-name: RefreshToken
+      token:
+        type: string
+        x-go-name: Token
+    type: object
+    x-go-package: SejutaCita/models
   UserUpdate:
     description: UserUpdate defines the structure for an API User on PUT methods
     properties:
@@ -193,7 +203,7 @@ paths:
           type: object
       responses:
         "200":
-          $ref: '#/responses/tokenResponse'
+          $ref: '#/responses/userTokenResponse'
         "401":
           $ref: '#/responses/errorResponse'
         "500":
@@ -377,13 +387,6 @@ responses:
     description: Generic error message returned as a string
     schema:
       $ref: '#/definitions/GenericError'
-  tokenResponse:
-    description: A token that is returned in the response
-    schema:
-      properties:
-        Token:
-          type: string
-      type: object
   userIdResponse:
     description: User ID (string) that is returned in the response
     schema:
@@ -395,6 +398,10 @@ responses:
     description: A user that is returned in the response
     schema:
       $ref: '#/definitions/User'
+  userTokenResponse:
+    description: Tokens that are returned in the response
+    schema:
+      $ref: '#/definitions/UserToken'
   usersResponse:
     description: Users that are returned in the response
     schema:

@@ -21,7 +21,7 @@ func NewAuthHandler(l *log.Logger) *AuthHandler {
 // swagger:route POST /login auth login
 // Login with username and password and returns the token of the user
 // responses:
-//  200: tokenResponse
+//  200: userTokenResponse
 //  401: errorResponse
 //	500: errorResponse
 func (h *AuthHandler) Login(rw http.ResponseWriter, r *http.Request) {
@@ -50,7 +50,11 @@ func (h *AuthHandler) Login(rw http.ResponseWriter, r *http.Request) {
 	models.UpdateAllTokens(token, refreshToken, existingUser.Id)
 
 	rw.WriteHeader(http.StatusOK)
-	rw.Write([]byte(token))
+	tokens := models.UserToken{
+		Token:        token,
+		RefreshToken: refreshToken,
+	}
+	tokens.ToJSON(rw)
 }
 
 func (h *AuthHandler) MiddlewareValidateLogin(next http.Handler) http.Handler {

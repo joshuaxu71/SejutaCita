@@ -36,21 +36,26 @@ import (
 )
 
 func main() {
+	// loading the .env file
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
 
+	// initializing the database
 	common.InitDb()
 
-	l := log.New(os.Stdout, "log", log.LstdFlags)
+	// create the logger
+	l := log.New(os.Stdout, "SejutaCita: ", log.LstdFlags)
 
+	// create the router and serve the swagger documentation
 	r := mux.NewRouter()
 	opts := middleware.RedocOpts{SpecURL: "/swagger.yaml"}
 	sh := middleware.Redoc(opts, nil)
 	r.Methods(http.MethodGet).Subrouter().Handle("/docs", sh)
 	r.Methods(http.MethodGet).Subrouter().Handle("/swagger.yaml", http.FileServer(http.Dir("./")))
 
+	// add routes to the router
 	routes.AuthRoutes(r, l)
 	routes.UserRoutes(r, l)
 

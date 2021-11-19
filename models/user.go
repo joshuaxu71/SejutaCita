@@ -197,31 +197,19 @@ func (user *User) ValidateUpdate() error {
 }
 
 func validateRole(fl validator.FieldLevel) bool {
-	if fl.Field().String() == string(General) || fl.Field().String() == string(Admin) {
-		return true
-	}
-	return false
+	return fl.Field().String() == string(General) || fl.Field().String() == string(Admin)
 }
 
 func validateFirstName(fl validator.FieldLevel) bool {
-	if fl.Field().String() != "" {
-		return true
-	}
-	return false
+	return fl.Field().String() != ""
 }
 
 func validateUsername(fl validator.FieldLevel) bool {
-	if fl.Field().String() != "" {
-		return true
-	}
-	return false
+	return fl.Field().String() != ""
 }
 
 func validatePassword(fl validator.FieldLevel) bool {
-	if fl.Field().String() != "" {
-		return true
-	}
-	return false
+	return fl.Field().String() != ""
 }
 
 func (user *User) FromJSON(r io.Reader) error {
@@ -244,7 +232,6 @@ func GetUserById(ctx *context.Context, id string) (*User, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	user := User{}
 	filter := bson.M{"_id": common.ObjectIDFromHex(id)}
 	err = db.Collection("users").FindOne(*ctx, filter).Decode(&user)
@@ -254,7 +241,6 @@ func GetUserById(ctx *context.Context, id string) (*User, error) {
 		}
 		return nil, err
 	}
-
 	return &user, nil
 }
 
