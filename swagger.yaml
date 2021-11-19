@@ -1,0 +1,356 @@
+basePath: /
+consumes:
+- application/json
+definitions:
+  ObjectID:
+    items:
+      format: uint8
+      type: integer
+    title: ObjectID is the BSON ObjectID type.
+    type: array
+    x-go-package: go.mongodb.org/mongo-driver/bson/primitive
+  User:
+    description: User defines the structure for an API User on GET methods
+    properties:
+      created_at:
+        description: the date the user was created at
+        format: date-time
+        type: string
+        x-go-name: CreatedAt
+      deleted_at:
+        description: the date the user was deleted at
+        format: date-time
+        type: string
+        x-go-name: DeletedAt
+      first_name:
+        description: the first name of the user
+        type: string
+        x-go-name: FirstName
+      id:
+        description: the ID of the user
+        format: bsonobjectid
+        type: string
+        x-go-name: Id
+      last_name:
+        description: the last name of the user
+        type: string
+        x-go-name: LastName
+      middle_name:
+        description: the middle name of the user
+        type: string
+        x-go-name: MiddleName
+      password:
+        description: the password of the user
+        type: string
+        x-go-name: Password
+      refresh_token:
+        description: the refresh token of the user
+        type: string
+        x-go-name: RefreshToken
+      role:
+        description: |-
+          the role of the user
+          General General
+          Admin Admin
+        enum:
+        - General
+        - Admin
+        type: string
+        x-go-enum-desc: |-
+          General General
+          Admin Admin
+        x-go-name: Role
+      token:
+        description: the token of the user
+        type: string
+        x-go-name: Token
+      updated_at:
+        description: the date the user was last updated at
+        format: date-time
+        type: string
+        x-go-name: UpdatedAt
+      username:
+        description: the username of the user
+        type: string
+        x-go-name: Username
+    required:
+    - id
+    - created_at
+    - updated_at
+    - role
+    - first_name
+    - username
+    - password
+    type: object
+    x-go-package: SejutaCita/models
+  UserCreate:
+    description: UserCreate defines the structure for an API User on POST methods
+    properties:
+      first_name:
+        description: the first name of the user
+        type: string
+        x-go-name: FirstName
+      last_name:
+        description: the last name of the user
+        type: string
+        x-go-name: LastName
+      middle_name:
+        description: the middle name of the user
+        type: string
+        x-go-name: MiddleName
+      password:
+        description: the password of the user
+        type: string
+        x-go-name: Password
+      role:
+        description: |-
+          the role of the user
+          General General
+          Admin Admin
+        enum:
+        - General
+        - Admin
+        type: string
+        x-go-enum-desc: |-
+          General General
+          Admin Admin
+        x-go-name: Role
+      username:
+        description: the username of the user
+        type: string
+        x-go-name: Username
+    required:
+    - role
+    - first_name
+    - username
+    - password
+    type: object
+    x-go-package: SejutaCita/models
+  UserUpdate:
+    description: UserUpdate defines the structure for an API User on PUT methods
+    properties:
+      first_name:
+        description: the first name of the user
+        type: string
+        x-go-name: FirstName
+      last_name:
+        description: the last name of the user
+        type: string
+        x-go-name: LastName
+      middle_name:
+        description: the middle name of the user
+        type: string
+        x-go-name: MiddleName
+      password:
+        description: the password of the user
+        type: string
+        x-go-name: Password
+      role:
+        description: |-
+          the role of the user
+          General General
+          Admin Admin
+        enum:
+        - General
+        - Admin
+        type: string
+        x-go-enum-desc: |-
+          General General
+          Admin Admin
+        x-go-name: Role
+    type: object
+    x-go-package: SejutaCita/models
+info:
+  description: Documentation for SejutaCita
+  title: of SejutaCita
+  version: 1.0.0
+paths:
+  /login:
+    post:
+      description: Login with username and password and returns the token of the user
+      operationId: login
+      parameters:
+      - description: The username and password of the user
+        in: body
+        name: Body
+        schema:
+          properties:
+            Password:
+              type: string
+            Username:
+              type: string
+          required:
+          - Username
+          - Password
+          type: object
+      responses:
+        "200":
+          $ref: '#/responses/tokenResponse'
+      tags:
+      - auth
+  /user:
+    delete:
+      description: Deletes a User in the database and returns a boolean based on the
+        success of the update
+      operationId: deleteUser
+      parameters:
+      - description: The ID of the user to perform the operation on
+        in: query
+        name: id
+        required: true
+        type: string
+        x-go-name: Id
+      responses:
+        "200":
+          $ref: '#/responses/booleanResponse'
+      tags:
+      - user
+    get:
+      description: Returns a user by ID
+      operationId: getUserById
+      parameters:
+      - description: The ID of the user to perform the operation on
+        in: query
+        name: id
+        required: true
+        type: string
+        x-go-name: Id
+      responses:
+        "200":
+          $ref: '#/responses/userResponse'
+      tags:
+      - user
+    post:
+      description: Inserts a User in the database and returns the ID of the created
+        User
+      operationId: createUser
+      parameters:
+      - description: The details of the User that will be created
+        in: body
+        name: Body
+        required: true
+        schema:
+          $ref: '#/definitions/UserCreate'
+      responses:
+        "200":
+          $ref: '#/responses/userIdResponse'
+      tags:
+      - user
+    put:
+      description: Updates a User in the database and returns a boolean based on the
+        success of the update
+      operationId: updateUser
+      parameters:
+      - description: The ID of the user to perform the operation on
+        in: query
+        name: id
+        required: true
+        type: string
+        x-go-name: Id
+      - description: The details of the User that will be updated
+        in: body
+        name: Body
+        required: true
+        schema:
+          $ref: '#/definitions/UserUpdate'
+      responses:
+        "200":
+          $ref: '#/responses/booleanResponse'
+      tags:
+      - user
+  /users:
+    get:
+      description: Returns all users with optional filter and sorting
+      operationId: getUsers
+      parameters:
+      - description: |-
+          The filter based on user's role
+          General General
+          Admin Admin
+        enum:
+        - General
+        - Admin
+        in: query
+        name: role
+        type: string
+        x-go-enum-desc: |-
+          General General
+          Admin Admin
+        x-go-name: Role
+      - description: |-
+          The sorting based on category
+          created_at CreatedAt
+          first_name FirstName
+        enum:
+        - created_at
+        - first_name
+        in: query
+        name: category
+        type: string
+        x-go-enum-desc: |-
+          created_at CreatedAt
+          first_name FirstName
+        x-go-name: Category
+      - description: |-
+          The sorting based on order
+          2 Asc
+          1 Desc
+        enum:
+        - 2
+        - 1
+        format: int64
+        in: query
+        name: order
+        type: integer
+        x-go-enum-desc: |-
+          2 Asc
+          1 Desc
+        x-go-name: Order
+      responses:
+        "200":
+          $ref: '#/responses/usersResponse'
+      tags:
+      - users
+produces:
+- application/json
+responses:
+  booleanResponse:
+    description: A boolean value that is returned in the response to denote success
+    schema:
+      properties:
+        Success:
+          type: boolean
+      type: object
+  tokenResponse:
+    description: A token that is returned in the response
+    schema:
+      properties:
+        Token:
+          type: string
+      type: object
+  userIdResponse:
+    description: User ID (string) that is returned in the response
+    schema:
+      properties:
+        Id:
+          $ref: '#/definitions/ObjectID'
+      type: object
+  userResponse:
+    description: A user that is returned in the response
+    schema:
+      $ref: '#/definitions/User'
+  usersResponse:
+    description: Users that are returned in the response
+    schema:
+      items:
+        $ref: '#/definitions/User'
+      type: array
+schemes:
+- http
+securityDefinitions:
+  api_key:
+    description: JWT Authorization header using the Bearer scheme.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

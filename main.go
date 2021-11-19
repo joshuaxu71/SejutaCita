@@ -1,3 +1,24 @@
+// Package classification of SejutaCita
+//
+// Documentation for SejutaCita
+//
+//	Schemes: http
+//  BasePath: /
+//  Version: 1.0.0
+//
+//	Consumes:
+//	- application/json
+//
+//	Produces:
+//	- application/json
+//
+//  SecurityDefinitions:
+//  api_key:
+//   description: "JWT Authorization header using the Bearer scheme."
+//   type: apiKey
+//   name: Authorization
+//   in: header
+// swagger:meta
 package main
 
 import (
@@ -6,6 +27,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/go-openapi/runtime/middleware"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 
@@ -24,6 +46,11 @@ func main() {
 	l := log.New(os.Stdout, "log", log.LstdFlags)
 
 	r := mux.NewRouter()
+	opts := middleware.RedocOpts{SpecURL: "/swagger.yaml"}
+	sh := middleware.Redoc(opts, nil)
+	r.Methods(http.MethodGet).Subrouter().Handle("/docs", sh)
+	r.Methods(http.MethodGet).Subrouter().Handle("/swagger.yaml", http.FileServer(http.Dir("./")))
+
 	routes.AuthRoutes(r, l)
 	routes.UserRoutes(r, l)
 

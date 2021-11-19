@@ -18,7 +18,8 @@ func UserRoutes(r *mux.Router, l *log.Logger) {
 	getRouter.HandleFunc("/users", handlers.GetUsers).
 		Queries(
 			"role", "{role}",
-			"sort", "{sort}",
+			"category", "{category}",
+			"order", "{order}",
 		)
 	getRouter.Use(middleware.Middleware)
 

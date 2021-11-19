@@ -16,23 +16,146 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+// A user that is returned in the response
+// swagger:response userResponse
+type userResponseWrapper struct {
+	// in:body
+	Body User
+}
+
+// Users that are returned in the response
+// swagger:response usersResponse
+type usersResponseWrapper struct {
+	// in:body
+	Body []User
+}
+
+// User ID (string) that is returned in the response
+// swagger:response userIdResponse
+type userIdResponseWrapper struct {
+	// in:body
+	Body struct {
+		Id primitive.ObjectID
+	}
+}
+
+// // swagger:response noContent
+// type userNoContentWrapper struct {
+// }
+
+// swagger:parameters getUserById updateUser deleteUser
+type userIdParameterWrapper struct {
+	// The ID of the user to perform the operation on
+	// in:query
+	// required:true
+	Id string `json:"id"`
+}
+
+// swagger:parameters getUsers
+type usersGetParameterWrapper struct {
+	// The filter based on user's role
+	// in:query
+	Role UserRole `json:"role"`
+	// The sorting based on category
+	// in:query
+	Category UserSortCategory `json:"category"`
+	// The sorting based on order
+	// in:query
+	Order SortOrder `json:"order"`
+}
+
+// swagger:parameters createUser
+type userCreateParameterWrapper struct {
+	// The details of the User that will be created
+	// in:body
+	// required:true
+	Body UserCreate
+}
+
+// swagger:parameters updateUser
+type userUpdateParameterWrapper struct {
+	// The details of the User that will be updated
+	// in:body
+	// required:true
+	Body UserUpdate
+}
+
+// User defines the structure for an API User on GET methods
+// swagger:model
 type User struct {
-	Id           primitive.ObjectID `bson:"_id"           json:"id"`
-	CreatedAt    time.Time          `bson:"created_at"    json:"created_at"`
-	UpdatedAt    time.Time          `bson:"updated_at"    json:"updated_at"`
-	DeletedAt    *time.Time         `bson:"deleted_at"    json:"deleted_at"`
-	Token        *string            `bson:"token"         json:"token"`
-	RefreshToken *string            `bson:"refresh_token" json:"refresh_token"`
-	Role         UserRole           `bson:"role"          json:"role"         validate:"role"`
-	FirstName    string             `bson:"first_name"    json:"first_name"   validate:"first_name"`
-	MiddleName   *string            `bson:"middle_name"   json:"middle_name"`
-	LastName     *string            `bson:"last_name"     json:"last_name"`
-	Username     string             `bson:"username"      json:"username"     validate:"username"`
-	Password     string             `bson:"password"      json:"password"     validate:"password"`
+	// the ID of the user
+	// required:true
+	// swagger:strfmt bsonobjectid
+	Id primitive.ObjectID `bson:"_id"           json:"id"`
+	// the date the user was created at
+	// required:true
+	CreatedAt time.Time `bson:"created_at"    json:"created_at"`
+	// the date the user was last updated at
+	// required:true
+	UpdatedAt time.Time `bson:"updated_at"    json:"updated_at"`
+	// the date the user was deleted at
+	DeletedAt *time.Time `bson:"deleted_at"    json:"deleted_at"`
+	// the token of the user
+	Token *string `bson:"token"         json:"token"`
+	// the refresh token of the user
+	RefreshToken *string `bson:"refresh_token" json:"refresh_token"`
+	// the role of the user
+	// required:true
+	Role UserRole `bson:"role"          json:"role"         validate:"role"`
+	// the first name of the user
+	// required:true
+	FirstName string `bson:"first_name"    json:"first_name"   validate:"first_name"`
+	// the middle name of the user
+	MiddleName *string `bson:"middle_name"   json:"middle_name"`
+	// the last name of the user
+	LastName *string `bson:"last_name"     json:"last_name"`
+	// the username of the user
+	// required:true
+	Username string `bson:"username"      json:"username"     validate:"username"`
+	// the password of the user
+	// required:true
+	Password string `bson:"password"      json:"password"     validate:"password"`
+}
+
+// UserCreate defines the structure for an API User on POST methods
+// swagger:model
+type UserCreate struct {
+	// the role of the user
+	// required:true
+	Role UserRole `bson:"role"          json:"role"         validate:"role"`
+	// the first name of the user
+	// required:true
+	FirstName string `bson:"first_name"    json:"first_name"   validate:"first_name"`
+	// the middle name of the user
+	MiddleName *string `bson:"middle_name"   json:"middle_name"`
+	// the last name of the user
+	LastName *string `bson:"last_name"     json:"last_name"`
+	// the username of the user
+	// required:true
+	Username string `bson:"username"      json:"username"     validate:"username"`
+	// the password of the user
+	// required:true
+	Password string `bson:"password"      json:"password"     validate:"password"`
+}
+
+// UserUpdate defines the structure for an API User on PUT methods
+// swagger:model
+type UserUpdate struct {
+	// the role of the user
+	Role UserRole `bson:"role"          json:"role"         validate:"role"`
+	// the first name of the user
+	FirstName string `bson:"first_name"    json:"first_name"   validate:"first_name"`
+	// the middle name of the user
+	MiddleName *string `bson:"middle_name"   json:"middle_name"`
+	// the last name of the user
+	LastName *string `bson:"last_name"     json:"last_name"`
+	// the password of the user
+	Password string `bson:"password"      json:"password"     validate:"password"`
 }
 
 type Users []*User
 
+// swagger:enum UserRole
 type UserRole string
 
 const (
@@ -40,6 +163,7 @@ const (
 	Admin   UserRole = "Admin"
 )
 
+// swagger:enum UserSortCategory
 type UserSortCategory string
 
 const (
@@ -110,12 +234,17 @@ func (user *User) FromJSON(r io.Reader) error {
 	return e.Decode(user)
 }
 
+func (user *User) ToJSON(w io.Writer) error {
+	e := json.NewEncoder(w)
+	return e.Encode(user)
+}
+
 func (users *Users) ToJSON(w io.Writer) error {
 	e := json.NewEncoder(w)
 	return e.Encode(users)
 }
 
-func GetUserById(ctx *context.Context, id string) (*Users, error) {
+func GetUserById(ctx *context.Context, id string) (*User, error) {
 	context := *ctx
 	if context.Value("user_role") != "Admin" {
 		if context.Value("user_id") != id {
@@ -135,8 +264,7 @@ func GetUserById(ctx *context.Context, id string) (*Users, error) {
 		return nil, err
 	}
 
-	users := append(Users{}, &user)
-	return &users, nil
+	return &user, nil
 }
 
 func GetUserByUsername(ctx *context.Context, username string) (*User, error) {
@@ -186,8 +314,10 @@ func GetUsers(ctx *context.Context, filter *UserFilter) (Users, error) {
 		if err != nil {
 			return nil, err
 		}
-		if user.Id.Hex() != context.Value("user_id") {
-			continue
+		if context.Value("user_role") != "Admin" {
+			if user.Id.Hex() != context.Value("user_id") {
+				continue
+			}
 		}
 		users = append(users, &user)
 	}
@@ -196,14 +326,14 @@ func GetUsers(ctx *context.Context, filter *UserFilter) (Users, error) {
 	return users, nil
 }
 
-func CreateUser(ctx *context.Context, user User) (primitive.ObjectID, error) {
+func CreateUser(ctx *context.Context, userCreate UserCreate) (primitive.ObjectID, error) {
 	db, err := common.GetDb()
 	if err != nil {
 		return primitive.NilObjectID, err
 	}
 
-	user.Username = strings.ToLower(user.Username)
-	existingUser, err := GetUserByUsername(ctx, user.Username)
+	userCreate.Username = strings.ToLower(userCreate.Username)
+	existingUser, err := GetUserByUsername(ctx, userCreate.Username)
 	if err != nil && err != mongo.ErrNoDocuments {
 		return primitive.NilObjectID, err
 	}
@@ -211,11 +341,19 @@ func CreateUser(ctx *context.Context, user User) (primitive.ObjectID, error) {
 		return primitive.NilObjectID, errors.New("Username already exists")
 	}
 
+	user := User{
+		Role:       userCreate.Role,
+		FirstName:  userCreate.FirstName,
+		MiddleName: userCreate.MiddleName,
+		LastName:   userCreate.LastName,
+		Username:   userCreate.Username,
+	}
+
 	now := time.Now()
 	user.Id = primitive.NewObjectID()
 	user.CreatedAt = now
 	user.UpdatedAt = now
-	user.Password = HashAndSalt(user.Password)
+	user.Password = HashAndSalt(userCreate.Password)
 	result, err := db.Collection("users").InsertOne(*ctx, user)
 	if err != nil {
 		return primitive.NilObjectID, err
@@ -224,7 +362,7 @@ func CreateUser(ctx *context.Context, user User) (primitive.ObjectID, error) {
 	return result.InsertedID.(primitive.ObjectID), nil
 }
 
-func UpdateUser(ctx *context.Context, id string, user User) (bool, error) {
+func UpdateUser(ctx *context.Context, id string, userUpdate UserUpdate) (bool, error) {
 	db, err := common.GetDb()
 	if err != nil {
 		return false, err
@@ -237,21 +375,21 @@ func UpdateUser(ctx *context.Context, id string, user User) (bool, error) {
 
 	filter := bson.M{"_id": common.ObjectIDFromHex(id)}
 	updates := bson.M{}
-	if user.Role != "" {
-		updates["role"] = user.Role
+	if userUpdate.Role != "" {
+		updates["role"] = userUpdate.Role
 	}
-	if user.FirstName != "" {
-		updates["first_name"] = user.FirstName
+	if userUpdate.FirstName != "" {
+		updates["first_name"] = userUpdate.FirstName
 	}
-	if user.MiddleName != nil {
-		updates["middle_name"] = user.MiddleName
+	if userUpdate.MiddleName != nil {
+		updates["middle_name"] = userUpdate.MiddleName
 	}
-	if user.LastName != nil {
-		updates["last_name"] = user.LastName
+	if userUpdate.LastName != nil {
+		updates["last_name"] = userUpdate.LastName
 	}
-	if user.Password != "" {
-		user.Password = HashAndSalt(user.Password)
-		updates["password"] = user.Password
+	if userUpdate.Password != "" {
+		userUpdate.Password = HashAndSalt(userUpdate.Password)
+		updates["password"] = userUpdate.Password
 	}
 	updater := bson.M{"$set": updates}
 

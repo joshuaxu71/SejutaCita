@@ -15,6 +15,27 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// A token that is returned in the response
+// swagger:response tokenResponse
+type tokenResponseWrapper struct {
+	// in:body
+	Body struct {
+		Token string
+	}
+}
+
+// swagger:parameters login
+type loginParameterWrapper struct {
+	// The username and password of the user
+	// in:body
+	Body struct {
+		// required:true
+		Username string
+		// required:true
+		Password string
+	}
+}
+
 func HashAndSalt(password string) string {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.MinCost)
 	if err != nil {
@@ -37,6 +58,19 @@ type SignedDetails struct {
 	UserId   string
 	UserRole UserRole
 	jwt.StandardClaims
+}
+
+func CreateToken(userId string) (string, error) {
+	atClaims := jwt.MapClaims{}
+	atClaims["authorized"] = true
+	atClaims["user_id"] = userId
+	atClaims["exp"] = time.Now().Add(time.Minute * 15).Unix()
+	at := jwt.NewWithClaims(jwt.SigningMethodHS256, atClaims)
+	token, err := at.SignedString([]byte(os.Getenv("ACCESS_SECRET")))
+	if err != nil {
+		return "", err
+	}
+	return token, nil
 }
 
 func GenerateAllTokens(user *User) (signedToken string, signedRefreshToken string, err error) {

@@ -4,16 +4,19 @@ import (
 	"SejutaCita/models"
 	"context"
 	"net/http"
+	"strings"
 )
 
 func Middleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 
-		clientToken := r.Header.Get("token")
-		if clientToken == "" {
-			http.Error(rw, "No Authorization header provided", http.StatusInternalServerError)
+		clientToken := r.Header.Get("Authorization")
+		if !strings.Contains(clientToken, "Bearer") {
+			http.Error(rw, "Invalid token", http.StatusInternalServerError)
 			return
 		}
+
+		clientToken = strings.Replace(clientToken, "Bearer ", "", -1)
 
 		claims, err := models.ValidateToken(clientToken)
 		if err != "" {
