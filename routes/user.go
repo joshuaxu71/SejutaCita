@@ -10,12 +10,14 @@ import (
 )
 
 func UserRoutes(r *mux.Router, l *log.Logger) {
+	handler := handlers.NewUsers(l)
+
 	getRouter := r.Methods(http.MethodGet).Subrouter()
-	getRouter.HandleFunc("/user", handlers.GetUserById).
+	getRouter.HandleFunc("/user", handler.GetUserById).
 		Queries(
 			"id", "{id}",
 		)
-	getRouter.HandleFunc("/users", handlers.GetUsers).
+	getRouter.HandleFunc("/users", handler.GetUsers).
 		Queries(
 			"role", "{role}",
 			"category", "{category}",
@@ -24,20 +26,20 @@ func UserRoutes(r *mux.Router, l *log.Logger) {
 	getRouter.Use(middleware.Middleware)
 
 	postRouter := r.Methods(http.MethodPost).Subrouter()
-	postRouter.HandleFunc("/user", handlers.CreateUser)
-	postRouter.Use(handlers.MiddlewareValidateUser)
+	postRouter.HandleFunc("/user", handler.CreateUser)
+	postRouter.Use(handler.MiddlewareValidateUser)
 	postRouter.Use(middleware.Middleware)
 
 	putRouter := r.Methods(http.MethodPut).Subrouter()
-	putRouter.HandleFunc("/user", handlers.UpdateUser).
+	putRouter.HandleFunc("/user", handler.UpdateUser).
 		Queries(
 			"id", "{id}",
 		)
-	putRouter.Use(handlers.MiddlewareValidateUser)
+	putRouter.Use(handler.MiddlewareValidateUser)
 	putRouter.Use(middleware.Middleware)
 
 	deleteRouter := r.Methods(http.MethodDelete).Subrouter()
-	deleteRouter.HandleFunc("/user/", handlers.DeleteUser).
+	deleteRouter.HandleFunc("/user/", handler.DeleteUser).
 		Queries(
 			"id", "{id}",
 		)
