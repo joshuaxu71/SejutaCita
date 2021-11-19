@@ -23,17 +23,40 @@ func NewUserHandler(l *log.Logger) *UserHandler {
 // Returns a user by ID
 // responses:
 //  200: userResponse
+//  401: errorResponse
+//  403: errorResponse
+//  404: errorResponse
+//  500: errorResponse
 func (h *UserHandler) GetUserById(rw http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
+	if ctx.Value("user_role") != "Admin" {
+		if ctx.Value("user_id") != mux.Vars(r)["id"] {
+			rw.WriteHeader(http.StatusForbidden)
+			models.GenericError{Message: models.ErrForbidden.Error()}.ToJSON(rw)
+			return
+		}
+	}
+
 	user, err := models.GetUserById(&ctx, mux.Vars(r)["id"])
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusNotFound)
+		switch err {
+		case models.ErrUserNotFound:
+			rw.WriteHeader(http.StatusNotFound)
+			models.GenericError{Message: models.ErrUserNotFound.Error()}.ToJSON(rw)
+			return
+		default:
+			rw.WriteHeader(http.StatusInternalServerError)
+			models.GenericError{Message: fmt.Sprintf("Unable to get user: %s", err)}.ToJSON(rw)
+			return
+		}
 	}
 
 	err = user.ToJSON(rw)
 	if err != nil {
-		http.Error(rw, "Unable to marshal json", http.StatusInternalServerError)
+		rw.WriteHeader(http.StatusInternalServerError)
+		models.GenericError{Message: models.ErrJsonMarshal.Error()}.ToJSON(rw)
+		return
 	}
 }
 
@@ -41,8 +64,18 @@ func (h *UserHandler) GetUserById(rw http.ResponseWriter, r *http.Request) {
 // Returns all users with optional filter and sorting
 // responses:
 //  200: usersResponse
+//  401: errorResponse
+//	403: errorResponse
+//  404: errorResponse
+//  500: errorResponse
 func (h *UserHandler) GetUsers(rw http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+
+	if ctx.Value("user_role") != "Admin" {
+		rw.WriteHeader(http.StatusForbidden)
+		models.GenericError{Message: models.ErrForbidden.Error()}.ToJSON(rw)
+		return
+	}
 
 	filter := models.UserFilter{
 		Sort: &models.UserSort{},
@@ -73,12 +106,23 @@ func (h *UserHandler) GetUsers(rw http.ResponseWriter, r *http.Request) {
 
 	users, err := models.GetUsers(&ctx, &filter)
 	if err != nil {
-		http.Error(rw, "Unable to retrieve data", http.StatusInternalServerError)
+		switch err {
+		case models.ErrUserNotFound:
+			rw.WriteHeader(http.StatusNotFound)
+			models.GenericError{Message: models.ErrUserNotFound.Error()}.ToJSON(rw)
+			return
+		default:
+			rw.WriteHeader(http.StatusInternalServerError)
+			models.GenericError{Message: fmt.Sprintf("Unable to get users: %s", err)}.ToJSON(rw)
+			return
+		}
 	}
 
 	err = users.ToJSON(rw)
 	if err != nil {
-		http.Error(rw, "Unable to marshal json", http.StatusInternalServerError)
+		rw.WriteHeader(http.StatusInternalServerError)
+		models.GenericError{Message: models.ErrJsonMarshal.Error()}.ToJSON(rw)
+		return
 	}
 }
 
@@ -86,13 +130,32 @@ func (h *UserHandler) GetUsers(rw http.ResponseWriter, r *http.Request) {
 // Inserts a User in the database and returns the ID of the created User
 // responses:
 //  200: userIdResponse
+//  401: errorResponse
+//	403: errorResponse
+//	409: errorResponse
+//  500: errorResponse
 func (h *UserHandler) CreateUser(rw http.ResponseWriter, r *http.Request) {
-	ctx := context.TODO()
+	ctx := r.Context()
 
-	user := r.Context().Value(KeyUser{}).(models.UserCreate)
+	if ctx.Value("user_role") != "Admin" {
+		rw.WriteHeader(http.StatusForbidden)
+		models.GenericError{Message: models.ErrForbidden.Error()}.ToJSON(rw)
+		return
+	}
+
+	user := r.Context().Value(KeyUser{}).(models.User)
 	id, err := models.CreateUser(&ctx, user)
 	if err != nil {
-		http.Error(rw, fmt.Sprintf("Unable to create user: %s", err), http.StatusInternalServerError)
+		switch err {
+		case models.ErrDuplicateUsername:
+			rw.WriteHeader(http.StatusConflict)
+			models.GenericError{Message: err.Error()}.ToJSON(rw)
+			return
+		default:
+			rw.WriteHeader(http.StatusInternalServerError)
+			models.GenericError{Message: fmt.Sprintf("Unable to create user: %s", err)}.ToJSON(rw)
+			return
+		}
 	}
 
 	rw.Write([]byte(id.Hex()))
@@ -102,19 +165,33 @@ func (h *UserHandler) CreateUser(rw http.ResponseWriter, r *http.Request) {
 // Updates a User in the database and returns a boolean based on the success of the update
 // responses:
 //  200: booleanResponse
+//  401: errorResponse
+//	403: errorResponse
+//  404: errorResponse
+//  500: errorResponse
 func (u *UserHandler) UpdateUser(rw http.ResponseWriter, r *http.Request) {
-	ctx := context.TODO()
+	ctx := r.Context()
 
-	_, err := models.GetUserById(&ctx, mux.Vars(r)["id"])
-	if err != nil {
-		http.Error(rw, "User with specified ID not found", http.StatusNotFound)
+	if ctx.Value("user_role") != "Admin" {
+		rw.WriteHeader(http.StatusForbidden)
+		models.GenericError{Message: models.ErrForbidden.Error()}.ToJSON(rw)
+		return
 	}
 
-	user := r.Context().Value(KeyUser{}).(models.UserUpdate)
+	user := r.Context().Value(KeyUser{}).(models.User)
 
 	result, err := models.UpdateUser(&ctx, mux.Vars(r)["id"], user)
 	if err != nil {
-		http.Error(rw, "Unable to update user", http.StatusInternalServerError)
+		switch err {
+		case models.ErrUserNotFound:
+			rw.WriteHeader(http.StatusNotFound)
+			models.GenericError{Message: models.ErrUserNotFound.Error()}.ToJSON(rw)
+			return
+		default:
+			rw.WriteHeader(http.StatusInternalServerError)
+			models.GenericError{Message: fmt.Sprintf("Unable to update user: %s", err)}.ToJSON(rw)
+			return
+		}
 	}
 
 	rw.Write([]byte(strconv.FormatBool(result)))
@@ -124,12 +201,31 @@ func (u *UserHandler) UpdateUser(rw http.ResponseWriter, r *http.Request) {
 // Deletes a User in the database and returns a boolean based on the success of the update
 // responses:
 //  200: booleanResponse
+//  401: errorResponse
+//	403: errorResponse
+//  404: errorResponse
+//  500: errorResponse
 func (h *UserHandler) DeleteUser(rw http.ResponseWriter, r *http.Request) {
-	ctx := context.TODO()
+	ctx := r.Context()
+
+	if ctx.Value("user_role") != "Admin" {
+		rw.WriteHeader(http.StatusForbidden)
+		models.GenericError{Message: models.ErrForbidden.Error()}.ToJSON(rw)
+		return
+	}
 
 	result, err := models.DeleteUser(&ctx, mux.Vars(r)["id"])
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusNotFound)
+		switch err {
+		case models.ErrUserNotFound:
+			rw.WriteHeader(http.StatusNotFound)
+			models.GenericError{Message: models.ErrUserNotFound.Error()}.ToJSON(rw)
+			return
+		default:
+			rw.WriteHeader(http.StatusInternalServerError)
+			models.GenericError{Message: fmt.Sprintf("Unable to delete user: %s", err)}.ToJSON(rw)
+			return
+		}
 	}
 
 	rw.Write([]byte(strconv.FormatBool(result)))
@@ -143,7 +239,8 @@ func (h *UserHandler) MiddlewareValidateUser(next http.Handler) http.Handler {
 
 		err := user.FromJSON(r.Body)
 		if err != nil {
-			http.Error(rw, "Error reading user", http.StatusBadRequest)
+			rw.WriteHeader(http.StatusBadRequest)
+			models.GenericError{Message: models.ErrJsonUnmarshal.Error()}.ToJSON(rw)
 			return
 		}
 
@@ -151,8 +248,11 @@ func (h *UserHandler) MiddlewareValidateUser(next http.Handler) http.Handler {
 		if r.Method == http.MethodPost {
 			err = user.ValidateCreate()
 			if err != nil {
-				http.Error(rw, fmt.Sprintf("Error validating user: %s", err), http.StatusBadRequest)
+				rw.WriteHeader(http.StatusBadRequest)
+				models.GenericError{Message: err.Error()}.ToJSON(rw)
 				return
+				// http.Error(rw, fmt.Sprintf("Error validating user: %s", err), http.StatusBadRequest)
+				// return
 			}
 		}
 
@@ -160,8 +260,11 @@ func (h *UserHandler) MiddlewareValidateUser(next http.Handler) http.Handler {
 		if r.Method == http.MethodPut {
 			err = user.ValidateUpdate()
 			if err != nil {
-				http.Error(rw, fmt.Sprintf("Error validating user: %s", err), http.StatusBadRequest)
+				rw.WriteHeader(http.StatusBadRequest)
+				models.GenericError{Message: err.Error()}.ToJSON(rw)
 				return
+				// http.Error(rw, fmt.Sprintf("Error validating user: %s", err), http.StatusBadRequest)
+				// return
 			}
 		}
 

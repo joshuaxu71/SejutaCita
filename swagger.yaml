@@ -2,6 +2,14 @@ basePath: /
 consumes:
 - application/json
 definitions:
+  GenericError:
+    description: GenericError is a generic error message returned by a server
+    properties:
+      message:
+        type: string
+        x-go-name: Message
+    type: object
+    x-go-package: SejutaCita/models
   ObjectID:
     items:
       format: uint8
@@ -186,6 +194,10 @@ paths:
       responses:
         "200":
           $ref: '#/responses/tokenResponse'
+        "401":
+          $ref: '#/responses/errorResponse'
+        "500":
+          $ref: '#/responses/errorResponse'
       tags:
       - auth
   /user:
@@ -203,6 +215,14 @@ paths:
       responses:
         "200":
           $ref: '#/responses/booleanResponse'
+        "401":
+          $ref: '#/responses/errorResponse'
+        "403":
+          $ref: '#/responses/errorResponse'
+        "404":
+          $ref: '#/responses/errorResponse'
+        "500":
+          $ref: '#/responses/errorResponse'
       tags:
       - user
     get:
@@ -218,6 +238,14 @@ paths:
       responses:
         "200":
           $ref: '#/responses/userResponse'
+        "401":
+          $ref: '#/responses/errorResponse'
+        "403":
+          $ref: '#/responses/errorResponse'
+        "404":
+          $ref: '#/responses/errorResponse'
+        "500":
+          $ref: '#/responses/errorResponse'
       tags:
       - user
     post:
@@ -234,6 +262,14 @@ paths:
       responses:
         "200":
           $ref: '#/responses/userIdResponse'
+        "401":
+          $ref: '#/responses/errorResponse'
+        "403":
+          $ref: '#/responses/errorResponse'
+        "409":
+          $ref: '#/responses/errorResponse'
+        "500":
+          $ref: '#/responses/errorResponse'
       tags:
       - user
     put:
@@ -256,6 +292,14 @@ paths:
       responses:
         "200":
           $ref: '#/responses/booleanResponse'
+        "401":
+          $ref: '#/responses/errorResponse'
+        "403":
+          $ref: '#/responses/errorResponse'
+        "404":
+          $ref: '#/responses/errorResponse'
+        "500":
+          $ref: '#/responses/errorResponse'
       tags:
       - user
   /users:
@@ -309,6 +353,14 @@ paths:
       responses:
         "200":
           $ref: '#/responses/usersResponse'
+        "401":
+          $ref: '#/responses/errorResponse'
+        "403":
+          $ref: '#/responses/errorResponse'
+        "404":
+          $ref: '#/responses/errorResponse'
+        "500":
+          $ref: '#/responses/errorResponse'
       tags:
       - users
 produces:
@@ -321,6 +373,10 @@ responses:
         Success:
           type: boolean
       type: object
+  errorResponse:
+    description: Generic error message returned as a string
+    schema:
+      $ref: '#/definitions/GenericError'
   tokenResponse:
     description: A token that is returned in the response
     schema:

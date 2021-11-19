@@ -4,7 +4,6 @@ import (
 	"SejutaCita/common"
 	"context"
 	"encoding/json"
-	"errors"
 	"io"
 	"strings"
 	"time"
@@ -38,10 +37,6 @@ type userIdResponseWrapper struct {
 		Id primitive.ObjectID
 	}
 }
-
-// // swagger:response noContent
-// type userNoContentWrapper struct {
-// }
 
 // swagger:parameters getUserById updateUser deleteUser
 type userIdParameterWrapper struct {
@@ -245,13 +240,6 @@ func (users *Users) ToJSON(w io.Writer) error {
 }
 
 func GetUserById(ctx *context.Context, id string) (*User, error) {
-	context := *ctx
-	if context.Value("user_role") != "Admin" {
-		if context.Value("user_id") != id {
-			return nil, errors.New("Not enough privilege")
-		}
-	}
-
 	db, err := common.GetDb()
 	if err != nil {
 		return nil, err
@@ -261,6 +249,9 @@ func GetUserById(ctx *context.Context, id string) (*User, error) {
 	filter := bson.M{"_id": common.ObjectIDFromHex(id)}
 	err = db.Collection("users").FindOne(*ctx, filter).Decode(&user)
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, ErrUserNotFound
+		}
 		return nil, err
 	}
 
@@ -277,6 +268,9 @@ func GetUserByUsername(ctx *context.Context, username string) (*User, error) {
 	filter := bson.M{"username": username}
 	err = db.Collection("users").FindOne(*ctx, filter).Decode(&user)
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, ErrUserNotFound
+		}
 		return nil, err
 	}
 
@@ -305,6 +299,9 @@ func GetUsers(ctx *context.Context, filter *UserFilter) (Users, error) {
 
 	cur, err := db.Collection("users").Aggregate(*ctx, pipeline, options.Aggregate().SetCollation(&options.Collation{Locale: "en"}))
 	if err != nil {
+		if err == mongo.ErrNilCursor {
+			return nil, ErrUserNotFound
+		}
 		return nil, err
 	}
 
@@ -326,34 +323,26 @@ func GetUsers(ctx *context.Context, filter *UserFilter) (Users, error) {
 	return users, nil
 }
 
-func CreateUser(ctx *context.Context, userCreate UserCreate) (primitive.ObjectID, error) {
+func CreateUser(ctx *context.Context, user User) (primitive.ObjectID, error) {
 	db, err := common.GetDb()
 	if err != nil {
 		return primitive.NilObjectID, err
 	}
 
-	userCreate.Username = strings.ToLower(userCreate.Username)
-	existingUser, err := GetUserByUsername(ctx, userCreate.Username)
-	if err != nil && err != mongo.ErrNoDocuments {
-		return primitive.NilObjectID, err
-	}
+	user.Username = strings.ToLower(user.Username)
+	existingUser, err := GetUserByUsername(ctx, user.Username)
 	if existingUser != nil {
-		return primitive.NilObjectID, errors.New("Username already exists")
+		return primitive.NilObjectID, ErrDuplicateUsername
 	}
-
-	user := User{
-		Role:       userCreate.Role,
-		FirstName:  userCreate.FirstName,
-		MiddleName: userCreate.MiddleName,
-		LastName:   userCreate.LastName,
-		Username:   userCreate.Username,
+	if err != nil && err != ErrUserNotFound {
+		return primitive.NilObjectID, err
 	}
 
 	now := time.Now()
 	user.Id = primitive.NewObjectID()
 	user.CreatedAt = now
 	user.UpdatedAt = now
-	user.Password = HashAndSalt(userCreate.Password)
+	user.Password = HashAndSalt(user.Password)
 	result, err := db.Collection("users").InsertOne(*ctx, user)
 	if err != nil {
 		return primitive.NilObjectID, err
@@ -362,7 +351,7 @@ func CreateUser(ctx *context.Context, userCreate UserCreate) (primitive.ObjectID
 	return result.InsertedID.(primitive.ObjectID), nil
 }
 
-func UpdateUser(ctx *context.Context, id string, userUpdate UserUpdate) (bool, error) {
+func UpdateUser(ctx *context.Context, id string, user User) (bool, error) {
 	db, err := common.GetDb()
 	if err != nil {
 		return false, err
@@ -370,26 +359,29 @@ func UpdateUser(ctx *context.Context, id string, userUpdate UserUpdate) (bool, e
 
 	_, err = GetUserById(ctx, id)
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return false, ErrUserNotFound
+		}
 		return false, err
 	}
 
 	filter := bson.M{"_id": common.ObjectIDFromHex(id)}
 	updates := bson.M{}
-	if userUpdate.Role != "" {
-		updates["role"] = userUpdate.Role
+	if user.Role != "" {
+		updates["role"] = user.Role
 	}
-	if userUpdate.FirstName != "" {
-		updates["first_name"] = userUpdate.FirstName
+	if user.FirstName != "" {
+		updates["first_name"] = user.FirstName
 	}
-	if userUpdate.MiddleName != nil {
-		updates["middle_name"] = userUpdate.MiddleName
+	if user.MiddleName != nil {
+		updates["middle_name"] = user.MiddleName
 	}
-	if userUpdate.LastName != nil {
-		updates["last_name"] = userUpdate.LastName
+	if user.LastName != nil {
+		updates["last_name"] = user.LastName
 	}
-	if userUpdate.Password != "" {
-		userUpdate.Password = HashAndSalt(userUpdate.Password)
-		updates["password"] = userUpdate.Password
+	if user.Password != "" {
+		user.Password = HashAndSalt(user.Password)
+		updates["password"] = user.Password
 	}
 	updater := bson.M{"$set": updates}
 
@@ -409,6 +401,9 @@ func DeleteUser(ctx *context.Context, id string) (bool, error) {
 
 	_, err = GetUserById(ctx, id)
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return false, ErrUserNotFound
+		}
 		return false, err
 	}
 

@@ -10,7 +10,7 @@ import (
 )
 
 func UserRoutes(r *mux.Router, l *log.Logger) {
-	handler := handlers.NewUsers(l)
+	handler := handlers.NewUserHandler(l)
 
 	getRouter := r.Methods(http.MethodGet).Subrouter()
 	getRouter.HandleFunc("/user", handler.GetUserById).
@@ -39,7 +39,7 @@ func UserRoutes(r *mux.Router, l *log.Logger) {
 	putRouter.Use(middleware.Middleware)
 
 	deleteRouter := r.Methods(http.MethodDelete).Subrouter()
-	deleteRouter.HandleFunc("/user/", handler.DeleteUser).
+	deleteRouter.HandleFunc("/user", handler.DeleteUser).
 		Queries(
 			"id", "{id}",
 		)

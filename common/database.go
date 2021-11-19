@@ -40,7 +40,8 @@ func InitDb() {
 	}
 
 	Db = client.Database(os.Getenv("DB_NAME"))
-	if collections, _ := Db.ListCollectionNames(ctx, nil); len(collections) == 0 {
+
+	if collections, _ := Db.ListCollectionNames(ctx, bson.M{}); len(collections) == 0 {
 		adminPassword, _ := bcrypt.GenerateFromPassword([]byte("admin"), bcrypt.MinCost)
 		generalPassword, _ := bcrypt.GenerateFromPassword([]byte("general"), bcrypt.MinCost)
 		Db.Collection("users").InsertMany(

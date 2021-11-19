@@ -3,11 +3,11 @@ package handlers
 import (
 	"SejutaCita/models"
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type AuthHandler struct {
@@ -22,19 +22,27 @@ func NewAuthHandler(l *log.Logger) *AuthHandler {
 // Login with username and password and returns the token of the user
 // responses:
 //  200: tokenResponse
+//  401: errorResponse
+//	500: errorResponse
 func (h *AuthHandler) Login(rw http.ResponseWriter, r *http.Request) {
-	ctx := context.TODO()
+	ctx := r.Context()
 
-	user := r.Context().Value(KeyUser{}).(models.User)
+	user := ctx.Value(KeyUser{}).(models.User)
 
 	existingUser, err := models.GetUserByUsername(&ctx, user.Username)
 	if err != nil {
-		http.Error(rw, "Incorrect credentials", http.StatusUnauthorized)
+		if err != mongo.ErrNoDocuments {
+			rw.WriteHeader(http.StatusUnauthorized)
+			models.GenericError{Message: models.ErrIncorrectCredentials.Error()}.ToJSON(rw)
+		}
+		rw.WriteHeader(http.StatusInternalServerError)
+		models.GenericError{Message: err.Error()}.ToJSON(rw)
 		return
 	}
 
 	if models.VerifyPassword(mux.Vars(r)["password"], user.Password) {
-		http.Error(rw, "Incorrect credentials", http.StatusUnauthorized)
+		rw.WriteHeader(http.StatusUnauthorized)
+		models.GenericError{Message: models.ErrIncorrectCredentials.Error()}.ToJSON(rw)
 		return
 	}
 
@@ -51,26 +59,9 @@ func (h *AuthHandler) MiddlewareValidateLogin(next http.Handler) http.Handler {
 
 		err := user.FromJSON(r.Body)
 		if err != nil {
-			http.Error(rw, "Error reading user", http.StatusBadRequest)
+			rw.WriteHeader(http.StatusBadRequest)
+			models.GenericError{Message: models.ErrJsonUnmarshal.Error()}.ToJSON(rw)
 			return
-		}
-
-		// validate the user on create
-		if r.Method == http.MethodPost {
-			err = user.ValidateCreate()
-			if err != nil {
-				http.Error(rw, fmt.Sprintf("Error validating user: %s", err), http.StatusBadRequest)
-				return
-			}
-		}
-
-		// validate Role field if it's update
-		if r.Method == http.MethodPut {
-			err = user.ValidateUpdate()
-			if err != nil {
-				http.Error(rw, fmt.Sprintf("Error validating user: %s", err), http.StatusBadRequest)
-				return
-			}
 		}
 
 		// add the user to the context

@@ -12,15 +12,17 @@ func Middleware(h http.Handler) http.Handler {
 
 		clientToken := r.Header.Get("Authorization")
 		if !strings.Contains(clientToken, "Bearer") {
-			http.Error(rw, "Invalid token", http.StatusInternalServerError)
+			rw.WriteHeader(http.StatusUnauthorized)
+			models.GenericError{Message: models.ErrUnauthorized.Error()}.ToJSON(rw)
 			return
 		}
 
 		clientToken = strings.Replace(clientToken, "Bearer ", "", -1)
 
 		claims, err := models.ValidateToken(clientToken)
-		if err != "" {
-			http.Error(rw, err, http.StatusInternalServerError)
+		if err != nil {
+			rw.WriteHeader(http.StatusInternalServerError)
+			models.GenericError{Message: err.Error()}.ToJSON(rw)
 			return
 		}
 
