@@ -61,7 +61,7 @@ func main() {
 
 	// create a new server
 	s := http.Server{
-		Addr:         ":9090",           // configure the bind address
+		Addr:         os.Getenv("PORT"), // configure the bind address
 		Handler:      r,                 // set the default handler
 		ErrorLog:     l,                 // set the logger for the server
 		ReadTimeout:  5 * time.Second,   // max time to read request from the client
@@ -70,7 +70,7 @@ func main() {
 	}
 
 	// start the server
-	l.Println("Starting server on port 9090")
+	l.Printf("Starting server on port %s", os.Getenv("PORT"))
 
 	err = s.ListenAndServe()
 	if err != nil {

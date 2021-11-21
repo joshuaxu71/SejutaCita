@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/name: sejuta-cita-load-balancer
+  name: sejuta-cita
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: sejuta-cita-load-balancer
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: sejuta-cita-load-balancer
+    spec:
+      containers:
+      - image: joshuaxu71/sejuta-cita-api
+        name: sejuta-cita
+        ports:
+        - containerPort: 9090
