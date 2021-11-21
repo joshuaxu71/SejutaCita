@@ -84,7 +84,7 @@ func (h *UserHandler) GetUsers(rw http.ResponseWriter, r *http.Request) {
 		if mux.Vars(r)["role"] == "Admin" {
 			admin := models.Admin
 			filter.Role = &admin
-		} else {
+		} else if mux.Vars(r)["role"] == "General" {
 			general := models.General
 			filter.Role = &general
 		}

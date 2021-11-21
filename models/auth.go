@@ -4,7 +4,6 @@ import (
 	"SejutaCita/common"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -84,7 +83,6 @@ func CreateToken(userId string) (string, error) {
 }
 
 func GenerateAllTokens(user *User) (signedToken string, signedRefreshToken string, err error) {
-	fmt.Println(1)
 	claims := &SignedDetails{
 		UserId:   user.Id.Hex(),
 		UserRole: user.Role,
@@ -167,15 +165,11 @@ func ValidateToken(signedToken string) (claims *SignedDetails, err error) {
 		return nil, ErrInvalidToken
 	}
 
-	if claims.ExpiresAt < time.Now().Unix() {
-		if err != nil {
-			return nil, ErrExpiredToken
-		}
+	if claims.ExpiresAt < time.Now().Unix() && claims.UserRole != "" {
+		return nil, ErrExpiredToken
 	}
 
 	if claims.UserRole == "" {
-		fmt.Println(claims.UserId)
-
 		claims, err = renewTokens(claims.UserId)
 		if err != nil {
 			return nil, err
@@ -188,7 +182,6 @@ func ValidateToken(signedToken string) (claims *SignedDetails, err error) {
 
 func renewTokens(userId string) (*SignedDetails, error) {
 	ctx := context.Background()
-
 	user, err := GetUserById(&ctx, userId)
 	if err != nil {
 		return nil, ErrExpiredToken
