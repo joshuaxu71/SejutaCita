@@ -21,7 +21,7 @@ func Middleware(h http.Handler) http.Handler {
 
 		claims, err := models.ValidateToken(clientToken)
 		if err != nil {
-			rw.WriteHeader(http.StatusInternalServerError)
+			rw.WriteHeader(http.StatusUnauthorized)
 			models.GenericError{Message: err.Error()}.ToJSON(rw)
 			return
 		}
